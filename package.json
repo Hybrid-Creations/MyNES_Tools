@@ -1,0 +1,22 @@
+{
+  "name": "com.MyNES.Tools",
+  "version": "0.1.0",
+  "displayName": "MyNES Tools",
+  "description": "A collection of helpful tools for Unity.",
+  "unity": "2018.4",
+  "unityRelease": "8f1",
+  "dependencies": {
+    "com.unity.some-package": "1.0.0",
+    "com.unity.other-package": "2.0.0"
+ },
+ "keywords": [
+    "Tool",
+    "Tools",
+    "MyNES"
+  ],
+  "author": {
+    "name": "MyNES",
+    "email": "mynescreations@gmail.com",
+    "url": "https://www.unity3d.com"
+  }
+}
