@@ -2,6 +2,8 @@
 
 using UnityEngine.Events;
 
+#if UNITY_ENGINE
+
 namespace CallOnMainThreadUtility
 {
    [InitializeOnLoad]
@@ -22,4 +24,4 @@ namespace CallOnMainThreadUtility
    }
 }
 
-
+#endif
