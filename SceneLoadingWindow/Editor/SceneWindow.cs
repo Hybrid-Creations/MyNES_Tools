@@ -38,13 +38,18 @@ namespace SceneLoadingWindow
          FillData();
       }
 
+#if UNITY_2019_3_OR_NEWER
       //----------------------------------------------------------------------------------------------------
       [UnityEditor.Callbacks.DidReloadScripts]
       private static void OnScriptsReloaded()
       {
-         var window = GetWindow<SceneWindow>("Scene Loading Window");
-         EditorApplication.delayCall += () => window.OnEnable();
+         if (EditorWindow.HasOpenInstances<SceneWindow>())
+         {
+            var window = GetWindow<SceneWindow>("Scene Loading Window");
+            EditorApplication.delayCall += () => window.OnEnable();
+         }
       }
+#endif
 
       ///---------------------------------------------------------------------------------------------------
       private void OnGUI()
@@ -92,17 +97,13 @@ namespace SceneLoadingWindow
       //----------------------------------------------------------------------------------------------------
       private void DrawScenesNotInBuild()
       {
-#if UNITY_2019_OR_NEWER
+#if UNITY_2019_3_OR_NEWER
          // An absolute-positioned example: We make foldout header group and put it in a small rect on the screen.
-         foldout_NotInBuild = EditorGUI.BeginFoldoutHeaderGroup(new Rect(10, 10, 200, 100), showPosition, status);
+         foldout_NotInBuild = EditorGUI.BeginFoldoutHeaderGroup(new Rect(10, 10, 200, 100), foldout_NotInBuild, "Scenes Not In Build");
 
          if (foldout_NotInBuild)
             if (Selection.activeTransform)
             {
-               Selection.activeTransform.position =
-                   EditorGUI.Vector3Field(new Rect(10, 30, 200, 100), "Position", Selection.activeTransform.position);
-               status = Selection.activeTransform.name;
-            }
 #else
          EditorGUILayout.LabelField("Scenes Not In Build", EditorStyles.boldLabel);
 #endif
@@ -117,6 +118,9 @@ namespace SceneLoadingWindow
                DrawSceneAsset(scene, i);
             }
          } //-----
+#if UNITY_2019_3_OR_NEWER
+            }
+#endif
       }
 
       //----------------------------------------------------------------------------------------------------
