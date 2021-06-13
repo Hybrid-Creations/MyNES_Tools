@@ -15,24 +15,50 @@ namespace SceneLoadingWindow
       //----------------------------------------------------------------------------------------------------
       private void GenerateGUIContent()
       {
-         playModeScene_Content = new GUIContent(playModeScene_Label, playModeScene_Tooltip);
+         if (GenerateContentIfNull(playModeScene_Content, out playModeScene_Content))
+         {
+            playModeScene_Content.text = playModeScene_Label;
+            playModeScene_Content.tooltip = playModeScene_Tooltip;
+         }
       }
 
       //----------------------------------------------------------------------------------------------------
       private void GenerateGUIStyles()
       {
-         if (GenerateIfNull(richText_Style, out richText_Style, EditorStyles.label))
+         if (GenerateStyleIfNull(richText_Style, out richText_Style, EditorStyles.label))
             richText_Style.richText = true;
       }
 
       //----------------------------------------------------------------------------------------------------
-      private bool GenerateIfNull(GUIStyle style, out GUIStyle newStyle, GUIStyle blueprint = null)
+      private bool GenerateStyleIfNull(GUIStyle style, out GUIStyle newStyle, GUIStyle blueprint = null)
       {
          bool boo = style == null;
          newStyle = null;
 
          if (boo)
-            newStyle = new GUIStyle(blueprint);
+         {
+            if (blueprint == null)
+               newStyle = new GUIStyle();
+            else
+               newStyle = new GUIStyle(blueprint);
+         }
+
+         return boo;
+      }
+
+      //----------------------------------------------------------------------------------------------------
+      private bool GenerateContentIfNull(GUIContent style, out GUIContent newStyle, GUIContent blueprint = null)
+      {
+         bool boo = style == null;
+         newStyle = null;
+
+         if (boo)
+         {
+            if (blueprint == null)
+               newStyle = new GUIContent();
+            else
+               newStyle = new GUIContent(blueprint);
+         }
 
          return boo;
       }
