@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 
 using UnityEditor;
+using UnityEditor.AnimatedValues;
 using UnityEditor.SceneManagement;
 
 using UnityEngine;
@@ -14,13 +15,14 @@ namespace SceneLoadingWindow
       private string startScenePath;
       private SceneAsset startSceneAsset;
       //private IList<SceneAsset> allScenes;
-      private IList<SceneAsset> scenesNotInBuild = new List<SceneAsset>();
+      private IList<(string name, string path)> scenesNotInBuild = new List<(string, string)>();
 
       private string startScenePath_SavedKey => $"{Application.productName}.SceneWindow.startScene";
 
+      private bool firstOpen = true;
       private Vector2 scrollView_BuildScenes;
       private Vector2 scrollView_NotInBuildScenes;
-      private bool foldout_NotInBuild;
+      private AnimBool animBool_NotInBuild = new AnimBool();
 
       [MenuItem("Tools/Scene Loading Window &#e")]
       //----------------------------------------------------------------------------------------------------
@@ -31,29 +33,24 @@ namespace SceneLoadingWindow
       }
 
       ///---------------------------------------------------------------------------------------------------
-      private void OnEnable()
-      {
-         GenerateGUIContent();
-         GenerateGUIStyles();
-         FillData();
-      }
-
-#if UNITY_2019_3_OR_NEWER
-      //----------------------------------------------------------------------------------------------------
-      [UnityEditor.Callbacks.DidReloadScripts]
-      private static void OnScriptsReloaded()
-      {
-         if (EditorWindow.HasOpenInstances<SceneWindow>())
-         {
-            var window = GetWindow<SceneWindow>("Scene Loading Window");
-            EditorApplication.delayCall += () => window.OnEnable();
-         }
-      }
-#endif
-
-      ///---------------------------------------------------------------------------------------------------
       private void OnGUI()
       {
+         if (firstOpen)
+         {
+            firstOpen = false;
+
+            GenerateGUIContent();
+            GenerateGUIStyles();
+            FillData();
+
+#if UNITY_2019_3_OR_NEWER
+            animBool_NotInBuild = new AnimBool(false);
+            animBool_NotInBuild.valueChanged.AddListener(Repaint);
+#else
+            animBool_NotInBuild = new AnimBool(true);
+#endif
+         }
+
          using (new GUILayout.HorizontalScope(EditorStyles.helpBox)) //-----
          {
             EditorGUILayout.LabelField(playModeScene_Content);
@@ -80,7 +77,7 @@ namespace SceneLoadingWindow
       {
          EditorGUILayout.LabelField("Scenes In Build", EditorStyles.boldLabel);
 
-         using (var scroll = new GUILayout.ScrollViewScope(scrollView_BuildScenes, GUILayout.MaxHeight(Screen.height))) //-----
+         using (var scroll = new GUILayout.ScrollViewScope(scrollView_BuildScenes, GUILayout.MaxHeight(Screen.height * 0.66f))) //-----
          {
             scrollView_BuildScenes = scroll.scrollPosition;
 
@@ -98,28 +95,26 @@ namespace SceneLoadingWindow
       private void DrawScenesNotInBuild()
       {
 #if UNITY_2019_3_OR_NEWER
-         // An absolute-positioned example: We make foldout header group and put it in a small rect on the screen.
-         foldout_NotInBuild = EditorGUI.BeginFoldoutHeaderGroup(new Rect(10, 10, 200, 100), foldout_NotInBuild, "Scenes Not In Build");
-
-         if (foldout_NotInBuild)
-            if (Selection.activeTransform)
-            {
+         animBool_NotInBuild.target = EditorGUI.BeginFoldoutHeaderGroup(new Rect(10, 10, 200, 100), animBool_NotInBuild.target, "Scenes Not In Build");
 #else
          EditorGUILayout.LabelField("Scenes Not In Build", EditorStyles.boldLabel);
 #endif
-
-         using (var scroll = new GUILayout.ScrollViewScope(scrollView_NotInBuildScenes)) //-----
+         if (EditorGUILayout.BeginFadeGroup(animBool_NotInBuild.faded))
          {
-            scrollView_NotInBuildScenes = scroll.scrollPosition;
+            if (animBool_NotInBuild.faded == 1)
+               scrollView_NotInBuildScenes = EditorGUILayout.BeginScrollView(scrollView_NotInBuildScenes); //-----
 
             for (int i = 0; i < scenesNotInBuild.Count; i++)
             {
                var scene = scenesNotInBuild[i];
-               DrawSceneAsset(scene, i);
+               DrawSceneAsset(scene.name, scene.path);
             }
-         } //-----
+            if (animBool_NotInBuild.faded == 1)
+               EditorGUILayout.EndScrollView();
+         }
+         EditorGUILayout.EndFadeGroup();
 #if UNITY_2019_3_OR_NEWER
-            }
+         EditorGUILayout.EndFoldoutHeaderGroup();
 #endif
       }
 
@@ -145,12 +140,18 @@ namespace SceneLoadingWindow
       }
 
       //----------------------------------------------------------------------------------------------------
-      private void DrawSceneAsset(SceneAsset scene, int index)
+      private void DrawSceneAsset(string name, string path)
       {
          using (new GUILayout.HorizontalScope("box")) //-----
          {
-            if (GUILayout.Button(scene.name, EditorStyles.label))
-            { }//EditorSceneManager.OpenScene(scene.path, OpenSceneMode.Single);
+            if (GUILayout.Button(name, EditorStyles.label))
+            {
+               var tempArray = EditorBuildSettings.scenes.ToList();
+               tempArray.Add(new EditorBuildSettingsScene(path, true));
+               EditorBuildSettings.scenes = tempArray.ToArray();
+
+               firstOpen = true;
+            }
          } //-----
       }
 
@@ -168,9 +169,9 @@ namespace SceneLoadingWindow
             editorScenes.Add(EditorBuildSettings.scenes[i].path);
 
          scenesNotInBuild = AssetDatabase.FindAssets("t:Scene")
-            .Select(guid => AssetDatabase.GUIDToAssetPath(guid))
-               .Where(path => editorScenes.Contains(path) == false)
-                  .Select(path => AssetDatabase.LoadAssetAtPath<SceneAsset>(path)).ToList();
+            .Select(guid => (name: Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(guid)), path: AssetDatabase.GUIDToAssetPath(guid)))
+               .Where(path => editorScenes.Contains(path.path) == false)
+                  .ToList();
       }
    }
 }
