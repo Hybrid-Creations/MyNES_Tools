@@ -33,6 +33,12 @@ namespace SceneLoadingWindow
       }
 
       ///---------------------------------------------------------------------------------------------------
+      private void OnDisable()
+      {
+         firstOpen = true;
+      }
+
+      ///---------------------------------------------------------------------------------------------------
       private void OnGUI()
       {
          if (firstOpen)
@@ -95,22 +101,21 @@ namespace SceneLoadingWindow
       private void DrawScenesNotInBuild()
       {
 #if UNITY_2019_3_OR_NEWER
-         animBool_NotInBuild.target = EditorGUI.BeginFoldoutHeaderGroup(new Rect(10, 10, 200, 100), animBool_NotInBuild.target, "Scenes Not In Build");
+         animBool_NotInBuild.target = EditorGUILayout.BeginFoldoutHeaderGroup(animBool_NotInBuild.target, "Scenes Not In Build");
 #else
          EditorGUILayout.LabelField("Scenes Not In Build", EditorStyles.boldLabel);
 #endif
          if (EditorGUILayout.BeginFadeGroup(animBool_NotInBuild.faded))
          {
-            if (animBool_NotInBuild.faded == 1)
-               scrollView_NotInBuildScenes = EditorGUILayout.BeginScrollView(scrollView_NotInBuildScenes); //-----
-
-            for (int i = 0; i < scenesNotInBuild.Count; i++)
+            using (var scrollView = new EditorGUILayout.ScrollViewScope(scrollView_NotInBuildScenes))
             {
-               var scene = scenesNotInBuild[i];
-               DrawSceneAsset(scene.name, scene.path);
-            }
-            if (animBool_NotInBuild.faded == 1)
-               EditorGUILayout.EndScrollView();
+               scrollView_NotInBuildScenes = scrollView.scrollPosition;
+               for (int i = 0; i < scenesNotInBuild.Count; i++)
+               {
+                  var scene = scenesNotInBuild[i];
+                  DrawSceneAsset(scene.name, scene.path);
+               }
+            } //-----
          }
          EditorGUILayout.EndFadeGroup();
 #if UNITY_2019_3_OR_NEWER
@@ -144,13 +149,13 @@ namespace SceneLoadingWindow
       {
          using (new GUILayout.HorizontalScope("box")) //-----
          {
-            if (GUILayout.Button(name, EditorStyles.label))
+            if (GUILayout.Button($"{name} ({path})", EditorStyles.label))
             {
                var tempArray = EditorBuildSettings.scenes.ToList();
                tempArray.Add(new EditorBuildSettingsScene(path, true));
                EditorBuildSettings.scenes = tempArray.ToArray();
 
-               firstOpen = true;
+               RefreshNotInBuildSceneList();
             }
          } //-----
       }
@@ -164,6 +169,12 @@ namespace SceneLoadingWindow
          if (startSceneAsset == null && string.IsNullOrEmpty(startScenePath) == false)
             startSceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(startScenePath);
 
+         RefreshNotInBuildSceneList();
+      }
+
+      //----------------------------------------------------------------------------------------------------
+      private void RefreshNotInBuildSceneList()
+      {
          var editorScenes = new List<string>();
          for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
             editorScenes.Add(EditorBuildSettings.scenes[i].path);

@@ -32,10 +32,10 @@ namespace SceneLoadingWindow
       //----------------------------------------------------------------------------------------------------
       private bool GenerateStyleIfNull(GUIStyle style, out GUIStyle newStyle, GUIStyle blueprint = null)
       {
-         bool boo = style == null;
-         newStyle = null;
+         bool isNull = style == null;
+         newStyle = isNull ? null : style;
 
-         if (boo)
+         if (isNull)
          {
             if (blueprint == null)
                newStyle = new GUIStyle();
@@ -43,16 +43,16 @@ namespace SceneLoadingWindow
                newStyle = new GUIStyle(blueprint);
          }
 
-         return boo;
+         return isNull;
       }
 
       //----------------------------------------------------------------------------------------------------
-      private bool GenerateContentIfNull(GUIContent style, out GUIContent newStyle, GUIContent blueprint = null)
+      private bool GenerateContentIfNull(GUIContent content, out GUIContent newStyle, GUIContent blueprint = null)
       {
-         bool boo = style == null;
-         newStyle = null;
+         bool isNull = content == null;
+         newStyle = isNull ? null : content;
 
-         if (boo)
+         if (isNull)
          {
             if (blueprint == null)
                newStyle = new GUIContent();
@@ -60,7 +60,7 @@ namespace SceneLoadingWindow
                newStyle = new GUIContent(blueprint);
          }
 
-         return boo;
+         return isNull;
       }
    }
 }
