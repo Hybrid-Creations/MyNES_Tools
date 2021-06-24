@@ -22,6 +22,7 @@ namespace SceneLoadingWindow
       private bool firstOpen = true;
       private Vector2 scrollView_BuildScenes;
       private Vector2 scrollView_NotInBuildScenes;
+      private AnimBool animBool_InBuild = new AnimBool();
       private AnimBool animBool_NotInBuild = new AnimBool();
 
       [MenuItem("Tools/Scene Loading Window &#e")]
@@ -50,16 +51,20 @@ namespace SceneLoadingWindow
             FillData();
 
 #if UNITY_2019_3_OR_NEWER
+            animBool_InBuild = new AnimBool(true);
             animBool_NotInBuild = new AnimBool(false);
+
+            animBool_InBuild.valueChanged.AddListener(Repaint);
             animBool_NotInBuild.valueChanged.AddListener(Repaint);
 #else
+            animBool_InBuild = new AnimBool(true);
             animBool_NotInBuild = new AnimBool(true);
 #endif
          }
 
          using (new GUILayout.HorizontalScope(EditorStyles.helpBox)) //-----
          {
-            EditorGUILayout.LabelField(playModeScene_Content);
+            EditorGUILayout.LabelField(playModeScene_Content, EditorStyles.boldLabel);
 
             using (var check = new EditorGUI.ChangeCheckScope())
             {
@@ -74,52 +79,70 @@ namespace SceneLoadingWindow
          } //-----
 
          DrawScenes();
-
+         GUILayout.FlexibleSpace();
          DrawScenesNotInBuild();
       }
 
       //----------------------------------------------------------------------------------------------------
       private void DrawScenes()
       {
-         EditorGUILayout.LabelField("Scenes In Build", EditorStyles.boldLabel);
-
-         using (var scroll = new GUILayout.ScrollViewScope(scrollView_BuildScenes, GUILayout.MaxHeight(Screen.height * 0.66f))) //-----
+#if UNITY_2019_3_OR_NEWER
+         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
          {
-            scrollView_BuildScenes = scroll.scrollPosition;
+            animBool_InBuild.target = EditorGUILayout.BeginFoldoutHeaderGroup(animBool_InBuild.target, "Scenes In Build", EditorStyles.foldout);
+#else
+         EditorGUILayout.LabelField("Scenes In Build", EditorStyles.boldLabel);
+#endif
+            if (animBool_InBuild.faded > 0)
+               using (new EditorGUILayout.FadeGroupScope(animBool_InBuild.faded))
+               {
+                  using (var scroll = new GUILayout.ScrollViewScope(scrollView_BuildScenes)) //-----
+                  {
+                     scrollView_BuildScenes = scroll.scrollPosition;
 
-            int index = 0;
-            for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
-            {
-               EditorBuildSettingsScene scene = EditorBuildSettings.scenes[i];
-               DrawEditorBuildScene(scene, i, index);
-               if (scene.enabled) index++;
-            }
+                     int index = 0;
+                     for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
+                     {
+                        EditorBuildSettingsScene scene = EditorBuildSettings.scenes[i];
+                        DrawEditorBuildScene(scene, i, index);
+                        if (scene.enabled) index++;
+                     }
+                  } //-----
+               } //-----
+
+#if UNITY_2019_3_OR_NEWER
+            EditorGUILayout.EndFoldoutHeaderGroup();
          } //-----
+
+#endif
       }
 
       //----------------------------------------------------------------------------------------------------
       private void DrawScenesNotInBuild()
       {
 #if UNITY_2019_3_OR_NEWER
-         animBool_NotInBuild.target = EditorGUILayout.BeginFoldoutHeaderGroup(animBool_NotInBuild.target, "Scenes Not In Build");
+         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+         {
+            animBool_NotInBuild.target = EditorGUILayout.BeginFoldoutHeaderGroup(animBool_NotInBuild.target, "Scenes Not In Build", EditorStyles.foldout);
 #else
          EditorGUILayout.LabelField("Scenes Not In Build", EditorStyles.boldLabel);
 #endif
-         if (EditorGUILayout.BeginFadeGroup(animBool_NotInBuild.faded))
-         {
-            using (var scrollView = new EditorGUILayout.ScrollViewScope(scrollView_NotInBuildScenes))
-            {
-               scrollView_NotInBuildScenes = scrollView.scrollPosition;
-               for (int i = 0; i < scenesNotInBuild.Count; i++)
+            if (animBool_NotInBuild.faded > 0)
+               using (new EditorGUILayout.FadeGroupScope(animBool_NotInBuild.faded))
                {
-                  var scene = scenesNotInBuild[i];
-                  DrawSceneAsset(scene.name, scene.path);
-               }
-            } //-----
-         }
-         EditorGUILayout.EndFadeGroup();
+                  using (var scrollView = new EditorGUILayout.ScrollViewScope(scrollView_NotInBuildScenes))
+                  {
+                     scrollView_NotInBuildScenes = scrollView.scrollPosition;
+                     for (int i = 0; i < scenesNotInBuild.Count; i++)
+                     {
+                        var scene = scenesNotInBuild[i];
+                        DrawSceneAsset(scene.name, scene.path);
+                     }
+                  } //-----
+               } //-----
 #if UNITY_2019_3_OR_NEWER
-         EditorGUILayout.EndFoldoutHeaderGroup();
+            EditorGUILayout.EndFoldoutHeaderGroup();
+         } //-----
 #endif
       }
 
