@@ -5,6 +5,7 @@ using UnityEngine.Events;
 
 namespace SimpleTimerUtility
 {
+   //-//----------------------------------------------------------------------------------------------------
    public static class TimerUtility
    {
       internal static readonly List<SimpleTimer> timers = new List<SimpleTimer>();
@@ -45,28 +46,32 @@ namespace SimpleTimerUtility
       }
    }
 
+   //-//----------------------------------------------------------------------------------------------------
    public class SimpleTimer
    {
       public double Duration { get; private set; }
       public double EndTime { get; private set; }
       public double StartTime { get; private set; }
       public double RemainingTime { get => EndTime - Time.time; }
+      public double ElapsedTime { get => Time.time - StartTime; }
+      public double ElapsedTimeNormalized { get => Time.time - StartTime / Duration; }
       public bool IsComplete { get; private set; }
       public bool HasListeners { get; private set; }
       public bool HasUpdateListeners { get; private set; }
 
       private UnityEvent myEvent = new UnityEvent();
-      private UnityEvent myUpdateEvent = new UnityEvent();
+      private UpdateUnityEvent myUpdateEvent = new UpdateUnityEvent();
 
       public SimpleTimer(double duration)
       {
          Duration = duration;
       }
 
+      ///---------------------------------------------------------------------------------------------------
       internal void Update()
       {
          if (HasUpdateListeners)
-            myUpdateEvent.Invoke();
+            myUpdateEvent.Invoke(ElapsedTimeNormalized);
 
          if (EndTime <= Time.time)
             End(true);
@@ -103,7 +108,7 @@ namespace SimpleTimerUtility
       }
 
       //----------------------------------------------------------------------------------------------------
-      public SimpleTimer AddUpdateListener(UnityAction action)
+      public SimpleTimer AddUpdateListener(UnityAction<double> action)
       {
          myUpdateEvent.AddListener(action);
          HasUpdateListeners = true;
@@ -121,7 +126,12 @@ namespace SimpleTimerUtility
       public void ClearUpdateListeners()
       {
          HasUpdateListeners = false;
-         myUpdateEvent = new UnityEvent();
+         myUpdateEvent = new UpdateUnityEvent();
       }
+
+      //-//-------------------------------------------------------------------------------------------------
+      [System.Serializable]
+      private class UpdateUnityEvent : UnityEvent<double>
+      { }
    }
 }
