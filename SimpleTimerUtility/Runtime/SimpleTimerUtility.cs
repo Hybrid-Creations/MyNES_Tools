@@ -53,8 +53,9 @@ namespace SimpleTimerUtility
       public double EndTime { get; private set; }
       public double StartTime { get; private set; }
       public double RemainingTime { get => EndTime - Time.time; }
+      public double RemainingTimeNormalized { get => RemainingTime / Duration; }
       public double ElapsedTime { get => Time.time - StartTime; }
-      public double ElapsedTimeNormalized { get => Time.time - StartTime / Duration; }
+      public double ElapsedTimeNormalized { get => ElapsedTime / Duration; }
       public bool IsComplete { get; private set; }
       public bool HasListeners { get; private set; }
       public bool HasUpdateListeners { get; private set; }
