@@ -28,7 +28,7 @@ namespace SimpleTimerUtility
       }
 
       //----------------------------------------------------------------------------------------------------
-      internal static void R()
+      internal static void CheckRunner()
       {
          if (runner == null)
          {
@@ -52,16 +52,16 @@ namespace SimpleTimerUtility
       public double Duration { get; private set; }
       public double EndTime { get; private set; }
       public double StartTime { get; private set; }
-      public double RemainingTime { get => EndTime - Time.time; }
-      public double RemainingTimeNormalized { get => RemainingTime / Duration; }
-      public double ElapsedTime { get => Time.time - StartTime; }
-      public double ElapsedTimeNormalized { get => ElapsedTime / Duration; }
       public bool IsComplete { get; private set; }
-      public bool HasListeners { get; private set; }
-      public bool HasUpdateListeners { get; private set; }
+      private bool HasListeners { get; set; }
+      private bool HasUpdateListeners { get; set; }
+      public double RemainingTime => EndTime - Time.time;
+      public double RemainingTimeNormalized => RemainingTime / Duration;
+      public double ElapsedTime => Time.time - StartTime;
+      public double ElapsedTimeNormalized => ElapsedTime / Duration;
 
-      private UnityEvent myEvent = new UnityEvent();
-      private UpdateUnityEvent myUpdateEvent = new UpdateUnityEvent();
+      private TimerUnityEvent myEvent = new TimerUnityEvent();
+      private TimerUnityEvent myUpdateEvent = new TimerUnityEvent();
 
       public SimpleTimer(double duration)
       {
@@ -72,16 +72,16 @@ namespace SimpleTimerUtility
       internal void Update()
       {
          if (HasUpdateListeners)
-            myUpdateEvent.Invoke(ElapsedTimeNormalized);
+            myUpdateEvent.Invoke(this);
 
          if (EndTime <= Time.time)
-            End(true);
+            Stop(true);
       }
 
       //----------------------------------------------------------------------------------------------------
       public void Start()
       {
-         TimerUtility.R();
+         TimerUtility.CheckRunner();
 
          StartTime = Time.time;
          EndTime = Time.time + Duration;
@@ -90,18 +90,20 @@ namespace SimpleTimerUtility
       }
 
       //----------------------------------------------------------------------------------------------------
-      public void End(bool runEvent)
+      public void Stop(bool runEvent)
       {
          IsComplete = true;
 
+         if (runEvent && HasUpdateListeners)
+            myUpdateEvent.Invoke(this);
          if (runEvent && HasListeners)
-            myEvent.Invoke();
+            myEvent.Invoke(this);
 
          TimerUtility.timers.Remove(this);
       }
 
       //----------------------------------------------------------------------------------------------------
-      public SimpleTimer AddListener(UnityAction action)
+      public SimpleTimer AddListener(UnityAction<SimpleTimer> action)
       {
          myEvent.AddListener(action);
          HasListeners = true;
@@ -109,7 +111,7 @@ namespace SimpleTimerUtility
       }
 
       //----------------------------------------------------------------------------------------------------
-      public SimpleTimer AddUpdateListener(UnityAction<double> action)
+      public SimpleTimer AddUpdateListener(UnityAction<SimpleTimer> action)
       {
          myUpdateEvent.AddListener(action);
          HasUpdateListeners = true;
@@ -117,22 +119,29 @@ namespace SimpleTimerUtility
       }
 
       //----------------------------------------------------------------------------------------------------
+      public void ClearAllListeners()
+      {
+         ClearListeners();
+         ClearUpdateListeners();
+      }
+
+      //----------------------------------------------------------------------------------------------------
       public void ClearListeners()
       {
          HasListeners = false;
-         myEvent = new UnityEvent();
+         myEvent = new TimerUnityEvent();
       }
 
       //----------------------------------------------------------------------------------------------------
       public void ClearUpdateListeners()
       {
          HasUpdateListeners = false;
-         myUpdateEvent = new UpdateUnityEvent();
+         myUpdateEvent = new TimerUnityEvent();
       }
 
       //-//-------------------------------------------------------------------------------------------------
       [System.Serializable]
-      private class UpdateUnityEvent : UnityEvent<double>
+      private class TimerUnityEvent : UnityEvent<SimpleTimer>
       { }
    }
 }

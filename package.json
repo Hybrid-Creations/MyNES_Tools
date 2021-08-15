@@ -1,6 +1,6 @@
 {
   "name": "com.mynes.tools",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "displayName": "MyNES Tools",
   "description": "A collection of helpful tools for Unity.",
   "unity": "2018.4",
