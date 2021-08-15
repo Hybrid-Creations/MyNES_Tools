@@ -102,6 +102,9 @@ namespace SimpleTimerUtility
          TimerUtility.timers.Remove(this);
       }
 
+      // [01] -----------------------------------------------------------------------------------------------
+      public SimpleTimer AddListener(UnityAction action) => AddListener((_) => action.Invoke());
+
       //----------------------------------------------------------------------------------------------------
       public SimpleTimer AddListener(UnityAction<SimpleTimer> action)
       {
@@ -109,6 +112,9 @@ namespace SimpleTimerUtility
          HasListeners = true;
          return this;
       }
+
+      // [01] -----------------------------------------------------------------------------------------------
+      public SimpleTimer AddUpdateListener(UnityAction action) => AddUpdateListener((_) => action.Invoke());
 
       //----------------------------------------------------------------------------------------------------
       public SimpleTimer AddUpdateListener(UnityAction<SimpleTimer> action)
