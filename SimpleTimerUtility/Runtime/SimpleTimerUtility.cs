@@ -8,33 +8,60 @@ namespace SimpleTimerUtility
    //-//----------------------------------------------------------------------------------------------------
    public static class TimerUtility
    {
-      internal static readonly List<SimpleTimer> timers = new List<SimpleTimer>();
-      private static TimerRunner runner;
+      internal static readonly Queue<SimpleTimer> timerPool = new Queue<SimpleTimer>();
+      internal static readonly HashSet<SimpleTimer> timers = new HashSet<SimpleTimer>();
+      private static bool createdRunner = false;
+
+      internal static float currentTime;
 
       //----------------------------------------------------------------------------------------------------
       public static SimpleTimer StartTimer(double duration)
       {
-         var newTimer = new SimpleTimer(duration);
-         newTimer.Start();
+         SimpleTimer newTimer;
+         if (timerPool.Count > 0)
+         {
+            newTimer = timerPool.Dequeue();
+            newTimer.ClearAllListeners();
+            newTimer.Setup(duration);
+         }
+         else
+            newTimer = new SimpleTimer(duration);
 
+         newTimer.Start();
          return newTimer;
       }
 
       //----------------------------------------------------------------------------------------------------
       private static void UpdateTimers()
       {
-         for (int i = 0; i < timers.Count; i++)
-            timers[i].Update();
+         currentTime = Time.time;
+
+         var list = new List<SimpleTimer>();
+         foreach (var timer in timers)
+         {
+            if (timer.Completed)
+               list.Add(timer);
+            else
+               timer.Update();
+         }
+
+         foreach (var timer in list)
+         {
+            timers.Remove(timer);
+            timerPool.Enqueue(timer);
+         }
       }
 
       //----------------------------------------------------------------------------------------------------
       internal static void CheckRunner()
       {
-         if (runner == null)
+         if (createdRunner == false)
          {
             var go = new GameObject("Timer Master");
-            runner = go.AddComponent<TimerRunner>();
+            go.AddComponent<TimerRunner>();
             GameObject.DontDestroyOnLoad(go);
+
+            createdRunner = true;
          }
       }
 
@@ -53,17 +80,22 @@ namespace SimpleTimerUtility
       public double EndTime { get; private set; }
       public double StartTime { get; private set; }
       public bool IsComplete { get; private set; }
-      private bool HasListeners { get; set; }
-      private bool HasUpdateListeners { get; set; }
       public double RemainingTime => EndTime - Time.time;
       public double RemainingTimeNormalized => RemainingTime / Duration;
       public double ElapsedTime => Time.time - StartTime;
       public double ElapsedTimeNormalized => ElapsedTime / Duration;
 
-      private TimerUnityEvent myEvent = new TimerUnityEvent();
-      private TimerUnityEvent myUpdateEvent = new TimerUnityEvent();
+      internal bool Completed { get; private set; }
+
+      private readonly TimerUnityEvent myEvent = new TimerUnityEvent();
+      private readonly TimerUnityEvent myUpdateEvent = new TimerUnityEvent();
 
       public SimpleTimer(double duration)
+      {
+         Duration = duration;
+      }
+
+      internal void Setup(double duration)
       {
          Duration = duration;
       }
@@ -71,10 +103,10 @@ namespace SimpleTimerUtility
       ///---------------------------------------------------------------------------------------------------
       internal void Update()
       {
-         if (HasUpdateListeners)
+         if (myUpdateEvent.HasListeners)
             myUpdateEvent.Invoke(this);
 
-         if (EndTime <= Time.time)
+         if (EndTime <= TimerUtility.currentTime)
             Stop(true);
       }
 
@@ -84,22 +116,25 @@ namespace SimpleTimerUtility
          TimerUtility.CheckRunner();
 
          StartTime = Time.time;
-         EndTime = Time.time + Duration;
+         EndTime = StartTime + Duration;
 
          TimerUtility.timers.Add(this);
       }
+
+      //----------------------------------------------------------------------------------------------------
+      public void Restart() => Start();
 
       //----------------------------------------------------------------------------------------------------
       public void Stop(bool runEvent)
       {
          IsComplete = true;
 
-         if (runEvent && HasUpdateListeners)
+         if (runEvent && myUpdateEvent.HasListeners)
             myUpdateEvent.Invoke(this);
-         if (runEvent && HasListeners)
+         if (runEvent && myEvent.HasListeners)
             myEvent.Invoke(this);
 
-         TimerUtility.timers.Remove(this);
+         Completed = true;
       }
 
       // [01] -----------------------------------------------------------------------------------------------
@@ -109,7 +144,6 @@ namespace SimpleTimerUtility
       public SimpleTimer AddListener(UnityAction<SimpleTimer> action)
       {
          myEvent.AddListener(action);
-         HasListeners = true;
          return this;
       }
 
@@ -120,7 +154,6 @@ namespace SimpleTimerUtility
       public SimpleTimer AddUpdateListener(UnityAction<SimpleTimer> action)
       {
          myUpdateEvent.AddListener(action);
-         HasUpdateListeners = true;
          return this;
       }
 
@@ -134,20 +167,55 @@ namespace SimpleTimerUtility
       //----------------------------------------------------------------------------------------------------
       public void ClearListeners()
       {
-         HasListeners = false;
-         myEvent = new TimerUnityEvent();
+         myEvent.ClearListeners();
       }
 
       //----------------------------------------------------------------------------------------------------
       public void ClearUpdateListeners()
       {
-         HasUpdateListeners = false;
-         myUpdateEvent = new TimerUnityEvent();
+         myUpdateEvent.ClearListeners();
       }
 
       //-//-------------------------------------------------------------------------------------------------
       [System.Serializable]
-      private class TimerUnityEvent : UnityEvent<SimpleTimer>
-      { }
+      internal class TimerUnityEvent
+      {
+         private readonly List<UnityAction<SimpleTimer>> actionList = new List<UnityAction<SimpleTimer>>();
+
+         internal bool HasListeners { get; private set; }
+
+         //-------------------------------------------------------------------------------------------------
+         internal void AddListener(UnityAction<SimpleTimer> action)
+         {
+            actionList.Add(action);
+            HasListeners = true;
+         }
+
+         //-------------------------------------------------------------------------------------------------
+         internal void Invoke(SimpleTimer timer)
+         {
+            foreach (var action in actionList)
+            {
+               try
+               {
+                  action.Invoke(timer);
+               }
+               catch (System.Exception e)
+               {
+                  Debug.LogError(e);
+               }
+            }
+         }
+
+         //-------------------------------------------------------------------------------------------------
+         internal void ClearListeners()
+         {
+            if (HasListeners)
+            {
+               actionList.Clear();
+               HasListeners = false;
+            }
+         }
+      }
    }
 }

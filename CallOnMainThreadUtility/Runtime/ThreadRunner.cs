@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 
 using UnityEngine.Events;
+using UnityEngine.Profiling;
 
 namespace CallOnMainThreadUtility
 {
@@ -11,11 +12,15 @@ namespace CallOnMainThreadUtility
       //----------------------------------------------------------------------------------------------------
       internal void LocalUpdate()
       {
+         Profiler.BeginSample("Call On Main Thread Update");
+
          while (queuedActions.Count > 0)
          {
             if (queuedActions.TryDequeue(out var action))
                action.Invoke();
          }
+
+         Profiler.EndSample();
       }
 
       //----------------------------------------------------------------------------------------------------
