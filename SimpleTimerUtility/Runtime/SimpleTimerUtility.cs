@@ -9,6 +9,7 @@ namespace SimpleTimerUtility
    public static class TimerUtility
    {
       internal static readonly Queue<SimpleTimer> timerPool = new Queue<SimpleTimer>();
+      internal static readonly Queue<SimpleTimer> timersToAdd = new Queue<SimpleTimer>();
       internal static readonly HashSet<SimpleTimer> timers = new HashSet<SimpleTimer>();
       private static bool createdRunner = false;
 
@@ -27,6 +28,7 @@ namespace SimpleTimerUtility
          else
             newTimer = new SimpleTimer(duration);
 
+         newTimer.IsPoolable = true;
          newTimer.Start();
          return newTimer;
       }
@@ -48,8 +50,12 @@ namespace SimpleTimerUtility
          foreach (var timer in list)
          {
             timers.Remove(timer);
-            timerPool.Enqueue(timer);
+            if (timer.IsPoolable)
+               timerPool.Enqueue(timer);
          }
+
+         while (timersToAdd.Count > 0)
+            timers.Add(timersToAdd.Dequeue());
       }
 
       //----------------------------------------------------------------------------------------------------
@@ -85,6 +91,8 @@ namespace SimpleTimerUtility
       public double ElapsedTime => Time.time - StartTime;
       public double ElapsedTimeNormalized => ElapsedTime / Duration;
 
+      internal bool IsPoolable { get; set; } = false;
+
       private readonly TimerUnityEvent myEvent = new TimerUnityEvent();
       private readonly TimerUnityEvent myUpdateEvent = new TimerUnityEvent();
 
@@ -118,7 +126,7 @@ namespace SimpleTimerUtility
 
          IsComplete = false;
 
-         TimerUtility.timers.Add(this);
+         TimerUtility.timersToAdd.Enqueue(this);
       }
 
       //----------------------------------------------------------------------------------------------------
