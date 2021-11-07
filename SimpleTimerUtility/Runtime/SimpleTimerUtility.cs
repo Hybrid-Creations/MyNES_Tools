@@ -39,7 +39,7 @@ namespace SimpleTimerUtility
          var list = new List<SimpleTimer>();
          foreach (var timer in timers)
          {
-            if (timer.Completed)
+            if (timer.IsComplete)
                list.Add(timer);
             else
                timer.Update();
@@ -85,8 +85,6 @@ namespace SimpleTimerUtility
       public double ElapsedTime => Time.time - StartTime;
       public double ElapsedTimeNormalized => ElapsedTime / Duration;
 
-      internal bool Completed { get; private set; }
-
       private readonly TimerUnityEvent myEvent = new TimerUnityEvent();
       private readonly TimerUnityEvent myUpdateEvent = new TimerUnityEvent();
 
@@ -118,6 +116,8 @@ namespace SimpleTimerUtility
          StartTime = Time.time;
          EndTime = StartTime + Duration;
 
+         IsComplete = false;
+
          TimerUtility.timers.Add(this);
       }
 
@@ -133,8 +133,6 @@ namespace SimpleTimerUtility
             myUpdateEvent.Invoke(this);
          if (runEvent && myEvent.HasListeners)
             myEvent.Invoke(this);
-
-         Completed = true;
       }
 
       // [01] -----------------------------------------------------------------------------------------------
