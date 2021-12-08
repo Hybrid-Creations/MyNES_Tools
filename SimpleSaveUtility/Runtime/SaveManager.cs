@@ -1,4 +1,4 @@
-using Codice.CM.WorkspaceServer;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SimpleSaveUtility
@@ -6,7 +6,7 @@ namespace SimpleSaveUtility
    //-//----------------------------------------------------------------------------------------------------
    public static class SaveManager
    {
-      //private static readonly List<SavedData> saveData = new List<SavedData>();
+      private static readonly Dictionary<string, string> saveData = new Dictionary<string, string>();
       private static string CurrentSaveIdentifier { get; set; }
 
       //----------------------------------------------------------------------------------------------------
@@ -24,13 +24,17 @@ namespace SimpleSaveUtility
       //----------------------------------------------------------------------------------------------------
       internal static void LoadDataInto<T>(SavedData<T> data)
       {
-         throw new System.NotImplementedException();
+         if (saveData.TryGetValue(data.Key, out var value))
+         {
+            data.Deserialize(value);
+         }
       }
 
       //----------------------------------------------------------------------------------------------------
       internal static void SaveDataFrom<T>(SavedData<T> data)
       {
-         throw new System.NotImplementedException();
+         data.Serialize();
+         saveData[data.Key] = data.savedValue;
       }
    }
 
@@ -41,12 +45,14 @@ namespace SimpleSaveUtility
    /// <typeparam name="T"></typeparam>
    public class SavedData<T>
    {
-      internal bool loaded = false;
-      internal string key;
-      internal string savedValue;
+      private bool loaded = false;
+      private readonly string key;
       private T value;
-      internal T defaultValue;
 
+      internal string savedValue;
+      private readonly T defaultValue;
+
+      public string Key => key;
       public T Value
       {
          get
@@ -54,14 +60,14 @@ namespace SimpleSaveUtility
             if (!loaded)
             {
                SaveManager.LoadDataInto(this);
-               Deserialize(savedValue);
+               loaded = true;
             }
+
             return value;
          }
          set
          {
             this.value = value;
-            Serialize(value);
             SaveManager.SaveDataFrom(this);
          }
       }
@@ -74,7 +80,7 @@ namespace SimpleSaveUtility
       }
 
       //----------------------------------------------------------------------------------------------------
-      private void Deserialize(string value)
+      internal void Deserialize(string value)
       {
          if (this.value is ISaveable s && s != null)
          {
@@ -109,17 +115,15 @@ namespace SimpleSaveUtility
       }
 
       //----------------------------------------------------------------------------------------------------
-      private void Serialize(T value)
+      internal void Serialize()
       {
-         if (this.value is ISaveable s && s != null)
-         {
-            savedValue = s.Serialize();
-            return;
-         }
-
-         savedValue = value.ToString();
+         if (value is ISaveable saveable)
+            savedValue = saveable.Serialize();
+         else
+            savedValue = value.ToString();
       }
 
+      //----------------------------------------------------------------------------------------------------
       public override string ToString()
       {
          return $"Key: \"{key}\", Value: \"{value}\"";
